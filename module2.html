@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Module 2 · First-order frequency response · Dynamic Characteristics Toolkit</title>
+  <meta name="description" content="Sine input to a first-order sensor: amplitude ratio, phase lag, Bode plot with the cut-off at ω = 1/τ, and a dynamic-error calculator.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<noscript><div class="noscript">This toolkit needs JavaScript to draw its plots.</div></noscript>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html" aria-label="Dynamic Characteristics Toolkit, home">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="5" fill="#1d4f86"/><path d="M4 20 H7 V7 H22" fill="none" stroke="#9fb6cf" stroke-width="1.6" stroke-dasharray="2 2"/><path d="M7 20 C10 10, 14 8, 22 7.6" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>
+      <span class="brand-text">Dynamic Characteristics Toolkit</span>
+    </a>
+    <nav class="nav" aria-label="Modules">
+      <a href="index.html">Home</a>
+      <a href="module1.html"><span class="nav-num">1</span>First-order time</a>
+      <a href="module2.html" aria-current="page"><span class="nav-num">2</span>Frequency response</a>
+      <a href="module3.html"><span class="nav-num">3</span>Second order</a>
+      <a href="module4.html"><span class="nav-num">4</span>Guess the sensor</a>
+      <a href="validation.html">Validation</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="page-head">
+    <p class="kicker">Module 2 of 4: the same sensor, fed a sine wave</p>
+    <h1>First-order frequency response</h1>
+    <p class="lede">Feed a first-order sensor a sine wave and it returns a sine of the same frequency, but smaller and later. How much smaller and how much later depends only on the product \(\omega\tau\).</p>
+  </section>
+
+  <details class="theory" open>
+    <summary>Theory in two minutes</summary>
+    <div class="theory-body">
+      <div>
+        <h3>Sine in, sine out</h3>
+        <p>With input \(x(t)=A\sin\omega t\), after the start-up transient:</p>
+        \[ y(t)=K A\,M\sin(\omega t+\phi) \]
+        <p>\(M\) is the amplitude ratio (normalised by \(K\)) and \(\phi\) is the phase shift.</p>
+      </div>
+      <div>
+        <h3>Amplitude ratio and phase</h3>
+        \[ M=\frac{1}{\sqrt{1+(\omega\tau)^2}} \]
+        \[ \phi=-\tan^{-1}(\omega\tau) \]
+        <p>The output peak comes \(\Delta t = |\phi|/\omega\) seconds after the input peak.</p>
+      </div>
+      <div>
+        <h3>Cut-off frequency</h3>
+        \[ \omega_c=\frac{1}{\tau}\ \text{rad/s},\qquad f_c=\frac{1}{2\pi\tau}\ \text{Hz} \]
+        <p>At \(\omega_c\): \(M = 1/\sqrt2 = 0.707\) (−3 dB) and \(\phi=-45^\circ\). Far above it, \(M\) falls by 10× per decade (−20 dB/decade) and \(\phi \to -90^\circ\).</p>
+      </div>
+      <div>
+        <h3>Dynamic error</h3>
+        \[ \delta = M-1 \]
+        <p>To keep \(|\delta|\le\delta_{max}\) for all frequencies up to \(f_{max}\), check the worst case, \(f_{max}\):</p>
+        \[ \tau_{max}=\frac{\sqrt{1/(1-\delta_{max})^2-1}}{2\pi f_{max}} \]
+      </div>
+    </div>
+  </details>
+
+  <div id="m2-predict" style="margin-top:16px"></div>
+
+  <section class="workspace" style="margin-top:16px">
+    <aside class="card controls" aria-label="Module 2 controls">
+      <h2>Sensor and input</h2>
+      <div id="m2-controls"></div>
+      <div class="btn-row" style="margin-top:10px">
+        <button type="button" class="btn ghost" id="m2-v2">τ = 0.2 s with sin 2t</button>
+        <button type="button" class="btn ghost" id="m2-cut">Go to the cut-off ω = 1/τ</button>
+        <button type="button" class="btn ghost" id="m2-v3">τ = 0.52 ms at 50 Hz</button>
+      </div>
+    </aside>
+
+    <div class="results">
+      <div class="readouts" id="m2-readouts" aria-live="polite"></div>
+      <div class="card plot-card">
+        <h3>Input and output sine waves</h3>
+        <p class="caption" id="m2-time-caption"></p>
+        <div class="plot" id="m2-time" role="img" aria-label="Input and output sine waves against time"></div>
+      </div>
+      <div class="card plot-card">
+        <h3>Bode plot of \(G(j\omega)/K\)</h3>
+        <p class="caption">Magnitude in decibels (top) and phase in degrees (bottom) against frequency on a log axis. The orange point is the frequency you selected; the dotted vertical line is the cut-off \(\omega_c = 1/\tau\).</p>
+        <div class="plot tall" id="m2-bode" role="img" aria-label="Bode magnitude and phase plot"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="calc-title">
+    <h2 id="calc-title">Dynamic-error calculator \(\delta = M - 1\)</h2>
+    <div class="two-col">
+      <div>
+        <h3>Check a sensor</h3>
+        <p class="ctl-hint">Give τ and the signal frequency; get M, δ and the phase lag.</p>
+        <div class="guess-grid">
+          <div><label for="c1-tau">Time constant τ (s)</label><input id="c1-tau" type="number" step="any" min="0" value="0.2" inputmode="decimal"></div>
+          <div><label for="c1-w">Frequency ω (rad/s)</label><input id="c1-w" type="number" step="any" min="0" value="2" inputmode="decimal"></div>
+        </div>
+        <div class="form-msg" id="c1-msg" role="alert"></div>
+        <table class="mtable" style="margin-top:6px"><tbody id="c1-out"></tbody></table>
+      </div>
+      <div>
+        <h3>Design for a bandwidth</h3>
+        <p class="ctl-hint">Give the highest frequency and the largest dynamic error you can accept; get the largest τ allowed.</p>
+        <div class="guess-grid">
+          <div><label for="c2-f">Highest frequency f<sub>max</sub> (Hz)</label><input id="c2-f" type="number" step="any" min="0" value="100" inputmode="decimal"></div>
+          <div><label for="c2-d">Largest |δ| (%)</label><input id="c2-d" type="number" step="any" min="0" max="99" value="5" inputmode="decimal"></div>
+          <div><label for="c2-fc">Phase lag wanted at (Hz)</label><input id="c2-fc" type="number" step="any" min="0" value="50" inputmode="decimal"></div>
+        </div>
+        <div class="form-msg" id="c2-msg" role="alert"></div>
+        <table class="mtable" style="margin-top:6px"><tbody id="c2-out"></tbody></table>
+        <div class="btn-row" style="margin-top:8px"><button type="button" class="btn secondary" id="c2-load">Show this sensor in the plots</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="two-col">
+    <div class="card notes">
+      <h2>What to notice</h2>
+      <ul>
+        <li>Only \(\omega\tau\) matters. Doubling the frequency has exactly the same effect as doubling τ.</li>
+        <li>At low frequency (\(\omega\tau \ll 1\)) the output follows the input almost perfectly. At \(\omega\tau = 1\) it has lost 29% of its amplitude and lags by 45°.</li>
+        <li>Turn on the start-up transient: the output first drifts, then settles into the steady sine after about \(5\tau\). M and φ describe only the settled part.</li>
+        <li>The phase lag never goes past 90°, however high the frequency.</li>
+      </ul>
+    </div>
+    <div class="card notes">
+      <h2>Engineering meaning</h2>
+      <ul>
+        <li>A sensor is a low-pass filter. To measure a signal faithfully, its highest frequency must sit well below \(f_c=1/(2\pi\tau)\).</li>
+        <li>For 5% dynamic error the signal must stay below about \(0.33\,\omega_c\). Measuring up to 100 Hz needs \(\tau \le 0.52\) ms.</li>
+        <li>Phase lag matters even when amplitude error is small: at 50 Hz that same sensor still delays the signal by 9.3°, which can upset a control loop.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Validation for this module</h2>
+    <div id="m2-validation"></div>
+    <p class="ctl-hint">All six checks are on the <a href="validation.html">Validation page</a>.</p>
+  </section>
+</main>
+
+<footer><div class="footer-inner"><span>ENCS4380 Interfacing Techniques · Homework 1 · Birzeit University</span><span id="repo-link"></span></div></footer>
+
+<script defer src="vendor/plotly/plotly.min.js"></script>
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/contrib/auto-render.min.js"></script>
+<script defer src="js/dyn-math.js"></script>
+<script defer src="js/ui.js"></script>
+<script defer src="js/validation.js"></script>
+<script defer src="js/module2.js"></script>
+</body>
+</html>

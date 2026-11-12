@@ -1,0 +1,9 @@
+{
+  "name": "encs4380-dynamics-toolkit",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dynamic Characteristics Interactive Toolkit - ENCS4380 Homework 1 (static site, no build step)",
+  "scripts": {
+    "test": "node tests/dyn-math.test.js"
+  }
+}
