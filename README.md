@@ -280,7 +280,7 @@ These definitions are used in the code. The assignment says the formulas come fr
 
 ## Use of AI assistants
 
-The assignment allows AI coding assistants but requires the README to say what they were used for. **Edit this paragraph so that it is true for your group:**
+The assignment allows AI coding assistants but requires the README to say what they were used for:
 
 > We used an AI assistant (Claude, by Anthropic) to generate the first version of the code, the unit tests and the documentation. Each member then reviewed, tested and [describe any changes you made] the module they own, and can explain every line of it and every equation on its page. The validation values were checked by running the code (`npm test` and `validation.html`), not taken from the AI's text.
 
