@@ -4,10 +4,11 @@ ENCS4380 Interfacing Techniques, Birzeit University: Homework 1.
 
 An interactive, static web toolkit that makes the dynamic characteristics of sensors visible: first-order time and frequency response, second-order response with a state-space panel, and a "Guess the sensor" challenge. Every slider redraws its plots immediately, and all six validation checks from the assignment are computed live on the page.
 
-> **Live site:** `https://<github-username>.github.io/encs4380-dynamics-<group-name>/`
-> *(Replace this line with your real GitHub Pages link once Pages is switched on. See "Deploy to GitHub Pages" below.)*
+> **Live site:** https://hibat972-tech.github.io/encs4380-dynamics-T27/
+> https://hibat972-tech.github.io/encs4380-dynamics-T27/
+<img width="1886" height="907" alt="image" src="https://github.com/user-attachments/assets/8e5f46e9-c350-469a-a87d-d7d8369b9488" />
+<img width="1891" height="921" alt="image" src="https://github.com/user-attachments/assets/a5ed05e2-f488-48a9-a560-54686b803b45" />
 
-![Home page](docs/screenshots/home.png)
 
 ---
 
@@ -150,15 +151,23 @@ Notes:
 ---
 
 ## Team members and responsibilities
-
-*Fill this in with your real details. Each module has one owner, who is the person who explains it in the demo.*
-
-| Member (name) | Student ID | GitHub username | Owns | Issue |
-|---|---|---|---|---|
-| | | | Module 1: first-order time response (`module1.html`, `js/module1.js`) | #1 |
-| | | | Module 2: first-order frequency response (`module2.html`, `js/module2.js`) | #2 |
-| | | | Module 3: second-order + state space (`module3.html`, `js/module3.js`) | #3 |
+Raji Qumsiyeh
+1231111:
 | | | | Module 4: Guess the sensor (`module4.html`, `js/module4.js`) | #4 |
+
+Mahmoud Aljadaa 
+1231842:
+| | | | Module 3: second-order + state space (`module3.html`, `js/module3.js`) | #3 |
+
+Fadi Abdullah 
+1232848:
+| | | | Module 1: first-order time response (`module1.html`, `js/module1.js`) | #1 |
+
+Hiba Abu Taha 
+1221211:
+| | | | Module 2: first-order frequency response (`module2.html`, `js/module2.js`) | #2 |
+
+
 
 Shared parts (`js/dyn-math.js`, `js/ui.js`, `js/validation.js`, `css/style.css`, `index.html`, README): list who did what, for example "validation checks: member X; README and screenshots: member Y". If your group has fewer than four people, give one person two modules and write that here.
 
