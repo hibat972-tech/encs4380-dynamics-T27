@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Module 1 · First-order time response · Dynamic Characteristics Toolkit</title>
+  <meta name="description" content="Step and ramp response of a first-order sensor: 63.2% at τ, 95% at 3τ, ramp lag and the log error-fraction method.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<noscript><div class="noscript">This toolkit needs JavaScript to draw its plots.</div></noscript>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html" aria-label="Dynamic Characteristics Toolkit, home">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="5" fill="#1d4f86"/><path d="M4 20 H7 V7 H22" fill="none" stroke="#9fb6cf" stroke-width="1.6" stroke-dasharray="2 2"/><path d="M7 20 C10 10, 14 8, 22 7.6" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>
+      <span class="brand-text">Dynamic Characteristics Toolkit</span>
+    </a>
+    <nav class="nav" aria-label="Modules">
+      <a href="index.html">Home</a>
+      <a href="module1.html" aria-current="page"><span class="nav-num">1</span>First-order time</a>
+      <a href="module2.html"><span class="nav-num">2</span>Frequency response</a>
+      <a href="module3.html"><span class="nav-num">3</span>Second order</a>
+      <a href="module4.html"><span class="nav-num">4</span>Guess the sensor</a>
+      <a href="validation.html">Validation</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="page-head">
+    <p class="kicker">Module 1 of 4: thermometer-type sensors</p>
+    <h1>First-order time response</h1>
+    <p class="lede">A first-order sensor has one energy store, such as the heat stored in a thermometer bulb. It cannot jump to a new value. It moves towards it exponentially, and one number, the time constant τ, sets how fast.</p>
+  </section>
+
+  <details class="theory" open>
+    <summary>Theory in two minutes</summary>
+    <div class="theory-body">
+      <div>
+        <h3>Model</h3>
+        <p>Input \(x(t)\) is the true quantity; output \(y(t)\) is what the sensor reports.</p>
+        \[ \tau\,\dot y + y = K\,x \]
+        \[ G(s)=\frac{Y(s)}{X(s)}=\frac{K}{\tau s+1} \]
+        <p>\(K\) is the static sensitivity (output units per input unit). \(\tau\) is the time constant in seconds.</p>
+      </div>
+      <div>
+        <h3>Step input \(x = A\)</h3>
+        \[ y(t)=KA\left(1-e^{-t/\tau}\right) \]
+        <p>At \(t=\tau\): \(1-e^{-1}=0.632\), so 63.2% of the final value. At \(t=3\tau\): \(1-e^{-3}=0.950\), so 95%. The final value is \(KA\), so the steady-state error is zero.</p>
+      </div>
+      <div>
+        <h3>Ramp input \(x = Rt\)</h3>
+        \[ y(t)=KR\left(t-\tau+\tau e^{-t/\tau}\right) \]
+        \[ y(t)\;\to\;KR\,(t-\tau)\quad (t \gg \tau) \]
+        <p>Once the transient dies out, the output is the ideal output delayed by exactly \(\tau\). The reading is always \(R\tau\) behind the true value: that is the steady-state error \(e_{ss}=R\tau\).</p>
+      </div>
+      <div>
+        <h3>Log method for \(\tau\)</h3>
+        \[ E_m=\frac{y_\infty-y(t)}{y_\infty-y(0)}=e^{-t/\tau} \]
+        \[ \ln E_m=-\frac{t}{\tau} \]
+        <p>On a logarithmic axis the error fraction is a straight line. Its slope is \(-1/\tau\). Fitting that line uses every data point, not just one, so it is the robust way to find \(\tau\) from real (noisy) data.</p>
+      </div>
+    </div>
+  </details>
+
+  <div id="m1-predict" style="margin-top:16px"></div>
+
+  <section class="workspace" style="margin-top:16px">
+    <aside class="card controls" aria-label="Module 1 controls">
+      <h2>Sensor and input</h2>
+      <div id="m1-controls"></div>
+      <div class="btn-row" style="margin-top:10px">
+        <button type="button" class="btn ghost" id="m1-thermo">Load the thermometer example</button>
+        <button type="button" class="btn ghost" id="m1-reset">Reset</button>
+      </div>
+      <p class="ctl-hint" style="margin-top:8px">Thermometer example from the assignment: τ = 10 s, from room air at 20 °C into tea at 80 °C (x₀ = 20 °C, A = 60 °C, K = 1). The plot then shows the actual temperature reading.</p>
+    </aside>
+
+    <div class="results">
+      <div class="readouts" id="m1-readouts" aria-live="polite"></div>
+      <div class="card plot-card">
+        <h3 id="m1-main-title">Input and output</h3>
+        <p class="caption" id="m1-main-caption"></p>
+        <div class="plot" id="m1-main" role="img" aria-label="Sensor output and ideal output against time"></div>
+      </div>
+      <div class="plot-grid">
+        <div class="card plot-card">
+          <h3>Measurement error \(e(t)=x(t)-y(t)/K\)</h3>
+          <p class="caption">True input minus what the sensor indicates, in input units. Its final value is the steady-state error.</p>
+          <div class="plot small" id="m1-error" role="img" aria-label="Measurement error against time"></div>
+        </div>
+        <div class="card plot-card">
+          <h3>Error fraction on a log axis</h3>
+          <p class="caption" id="m1-ef-caption"></p>
+          <div class="btn-row" style="margin:0 8px 4px">
+            <div id="m1-ef-mode"></div>
+          </div>
+          <div class="plot small" id="m1-ef" role="img" aria-label="Error fraction on a logarithmic axis"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="two-col">
+    <div class="card notes">
+      <h2>What to notice</h2>
+      <ul>
+        <li>Change <strong>K</strong>: the curve stretches vertically but the 63.2% point stays at the same time. Timing depends only on τ.</li>
+        <li>Double <strong>τ</strong>: every time on the plot doubles, and the error-fraction line becomes half as steep.</li>
+        <li>Switch to a <strong>ramp</strong>: the output runs parallel to the ideal line, shifted right by τ. A faster ramp (bigger R) gives a bigger error, but the time lag stays τ.</li>
+        <li>The error-fraction plot stays a straight line whatever K, A or R are. That is why the log method works on any first-order data set.</li>
+      </ul>
+    </div>
+    <div class="card notes">
+      <h2>Engineering meaning</h2>
+      <ul>
+        <li>A reading taken at \(t=\tau\) after a sudden change is still 36.8% short. Wait at least \(3\tau\) (95%) or \(5\tau\) (99.3%) before trusting it.</li>
+        <li>For a slowly changing quantity (a ramp), a first-order sensor never catches up. It always lags by τ seconds, which is an error of \(R\tau\) in input units.</li>
+        <li>Reducing τ (smaller bulb, thinner sheath, better thermal contact) cuts both the settling time and the ramp error.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Validation for this module</h2>
+    <div id="m1-validation"></div>
+    <p class="ctl-hint">All six checks are on the <a href="validation.html">Validation page</a>.</p>
+  </section>
+</main>
+
+<footer><div class="footer-inner"><span>ENCS4380 Interfacing Techniques · Homework 1 · Birzeit University</span><span id="repo-link"></span></div></footer>
+
+<script defer src="vendor/plotly/plotly.min.js"></script>
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/contrib/auto-render.min.js"></script>
+<script defer src="js/dyn-math.js"></script>
+<script defer src="js/ui.js"></script>
+<script defer src="js/validation.js"></script>
+<script defer src="js/module1.js"></script>
+</body>
+</html>
