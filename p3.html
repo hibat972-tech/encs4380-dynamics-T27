@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>P3 · Digital PID · Dynamic Characteristics Toolkit</title>
+  <meta name="description" content="A digital PID controller that updates only at the sampling instants and holds its output in between. See how the sampling time, saturation and integral windup change the response, and copy the matching Arduino code.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<noscript><div class="noscript">This toolkit needs JavaScript to draw its plots.</div></noscript>
+<header id="site-header" data-active="p3"></header>
+
+<main>
+  <section class="page-head">
+    <p class="kicker">Homework 2 · P3 of 4 · Control</p>
+    <h1>Digital PID</h1>
+    <p class="lede">A microcontroller does not control continuously. Every \(T_s\) seconds it reads the sensor, computes one number, and holds that number on the output until the next sample. The plant keeps moving in between. Make \(T_s\) larger and watch the response break.</p>
+  </section>
+
+  <details class="theory" open>
+    <summary>Theory in two minutes</summary>
+    <div class="theory-body">
+      <div>
+        <h3>The digital PID (assignment equation)</h3>
+        \[ u[k]=K_p\,e[k]+K_iT_s\sum_{j=0}^{k}e[j]+K_d\,\frac{e[k]-e[k-1]}{T_s} \]
+        <p>The integral becomes a running sum, the derivative becomes a difference. At \(k=0\) the previous error is \(e[-1]=0\), so the first sample has a short derivative “kick” when the setpoint jumps.</p>
+      </div>
+      <div>
+        <h3>Sample and hold</h3>
+        <p>\(u\) is computed at \(t=kT_s\) and held (zero-order hold) until \(t=(k+1)T_s\). The plant is integrated with a much smaller RK4 step in between, so the plant stays continuous and only the controller is digital. The control signal is a staircase.</p>
+      </div>
+      <div>
+        <h3>Why large \(T_s\) hurts</h3>
+        <p>The controller is blind between samples, and the hold adds an average delay of about \(T_s/2\). For P control on a first-order plant the closed loop is stable only while \(\left|e^{-T_s/\tau}-KK_p\left(1-e^{-T_s/\tau}\right)\right|<1\). For \(K=1,\ \tau=1,\ K_p=9\) that means \(T_s<0.223\) s.</p>
+      </div>
+      <div>
+        <h3>Saturation and anti-windup</h3>
+        <p>An actuator has limits. While \(u\) is stuck at a limit the error stays large, and the sum keeps growing (<em>windup</em>). When the output finally arrives, the stored sum is huge and drives it far past the setpoint. <strong>Anti-windup</strong> here stops adding to the sum while the output is saturated and the error would push it further into the limit.</p>
+      </div>
+    </div>
+  </details>
+
+  <div id="p3-predict" style="margin-top:16px"></div>
+
+  <h2 style="margin-top:22px" id="p3-title">Stair-step control, response and sampling time</h2>
+  <section class="workspace" aria-labelledby="p3-title">
+    <aside class="card controls" aria-label="Digital PID controls">
+      <h2>Sampling</h2>
+      <div id="p3-ts"></div>
+      <h2 style="margin-top:14px">Plant</h2>
+      <div id="p3-plant"></div>
+      <h2 style="margin-top:14px">Controller</h2>
+      <div id="p3-gains"></div>
+      <div id="p3-setpoint"></div>
+      <h2 style="margin-top:14px">Actuator limits and anti-windup</h2>
+      <div id="p3-limits"></div>
+      <h2 style="margin-top:14px">Time window</h2>
+      <div id="p3-time"></div>
+      <h2 style="margin-top:14px">Presets</h2>
+      <p class="ctl-group-title" style="margin-top:4px">Sampling time</p>
+      <div class="preset-row">
+        <button type="button" class="btn ghost" data-preset="ts-small">Ts = 0.01 s</button>
+        <button type="button" class="btn ghost" data-preset="ts-mid">Ts = 0.3 s</button>
+        <button type="button" class="btn ghost" data-preset="ts-big">Ts = 0.9 s: breaks</button>
+      </div>
+      <p class="ctl-group-title">Integral windup</p>
+      <div class="preset-row">
+        <button type="button" class="btn ghost" data-preset="wind-off">Windup: anti-windup OFF</button>
+        <button type="button" class="btn ghost" data-preset="wind-on">Windup prevented: ON</button>
+      </div>
+      <div class="preset-row"><button type="button" class="btn secondary" data-preset="reset">Reset all</button></div>
+    </aside>
+
+    <div class="results">
+      <div class="card">
+        <h3>Block diagram: sampler, digital PID, saturation, hold</h3>
+        <div class="diagram-wrap" id="p3-diagram"></div>
+      </div>
+      <div class="readouts" id="p3-readouts" aria-live="polite"></div>
+      <div class="status-box" id="p3-status"></div>
+      <div class="card plot-card">
+        <h3>Output against setpoint</h3>
+        <p class="caption">Blue: the continuous plant output. Green dots: the values the controller actually measures, once per \(T_s\). Dashed: the setpoint.</p>
+        <div class="plot tall" id="p3-resp" role="img" aria-label="Output of the digitally controlled plant"></div>
+      </div>
+      <div class="card plot-card">
+        <h3>Stair-step control signal u[k] and its limits</h3>
+        <p class="caption">The control value is constant between samples. Red dashed lines are the actuator limits. A single tall step at t = 0 can be the derivative kick (Kd·r/Ts, clipped to the limit).</p>
+        <div class="plot" id="p3-ctrl" role="img" aria-label="Stair-step control signal"></div>
+      </div>
+      <div class="card plot-card">
+        <h3>Integral windup: the I part of u</h3>
+        <p class="caption">Turn anti-windup off and use the windup preset: the green I part keeps growing while u sits at the limit, and then it pushes the output past the setpoint.</p>
+        <div class="plot small" id="p3-terms" role="img" aria-label="P, I and D parts of the control signal"></div>
+      </div>
+      <div class="plot-grid">
+        <div class="card plot-card">
+          <h3>Overshoot against Ts</h3>
+          <p class="caption">Same plant and gains, Ts swept from tiny to a few time constants. Red crosses: the loop does not settle. Dotted line: your Ts.</p>
+          <div class="plot small" id="p3-sweep-os" role="img" aria-label="Overshoot against sampling time"></div>
+        </div>
+        <div class="card plot-card">
+          <h3>Settling time against Ts</h3>
+          <p class="caption">The loop gets slower, and then stops settling at all.</p>
+          <div class="plot small" id="p3-sweep-ts" role="img" aria-label="Settling time against sampling time"></div>
+        </div>
+      </div>
+      <div id="p3-code"></div>
+      <p class="ctl-hint" style="margin:0">The sketch uses the same arithmetic as the simulation above. The first lines of the code hold your current gains, sampling time, limits and anti-windup setting. Only <code>readMeasurement()</code> and <code>writeActuator()</code> depend on your hardware.</p>
+    </div>
+  </section>
+
+  <section class="two-col">
+    <div class="card notes">
+      <h2>What to notice</h2>
+      <ul>
+        <li>Start with <strong>Ts = 0.01 s</strong>: the staircase is so fine that the response looks continuous. Raise Ts: the steps widen and the output lags behind.</li>
+        <li><strong>Ts = 0.9 s</strong> breaks this loop. u flips between the limits and the output never settles. The sweep plots show where it starts.</li>
+        <li><strong>Windup preset:</strong> compare the overshoot with anti-windup OFF and ON. The only difference is one line in the controller.</li>
+        <li>The control signal never leaves the red limits, but the grey “asked-for” value in P1 can. Here the code does the same as the Arduino: <code>constrain()</code>.</li>
+      </ul>
+    </div>
+    <div class="card notes">
+      <h2>Engineering meaning</h2>
+      <ul>
+        <li>Pick Ts about 10–20 times faster than the closed-loop response you want. Slower sampling needs lower gains.</li>
+        <li>Using <code>micros()</code> and a fixed period keeps Ts constant. A varying Ts changes the effective Ki and Kd.</li>
+        <li>Anti-windup matters whenever the setpoint can jump farther than the actuator can follow, such as a speed command that is larger than the motor can reach right away.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer><div class="footer-inner"><span>ENCS4380 Interfacing Techniques · Homework 2 · Birzeit University</span><span id="repo-link"></span></div></footer>
+
+<script defer src="vendor/plotly/plotly.min.js"></script>
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/contrib/auto-render.min.js"></script>
+<script defer src="js/dyn-math.js"></script>
+<script defer src="js/ui.js"></script>
+<script defer src="js/pid-sim.js"></script>
+<script defer src="js/control-ui.js"></script>
+<script defer src="js/p3.js"></script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>P2 · A slow sensor in the loop · Dynamic Characteristics Toolkit</title>
+  <meta name="description" content="Put a first-order sensor in the feedback path. The controller only sees the sensor reading, so a slow sensor makes the loop overshoot and then oscillate.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<noscript><div class="noscript">This toolkit needs JavaScript to draw its plots.</div></noscript>
+<header id="site-header" data-active="p2"></header>
+
+<main>
+  <section class="page-head">
+    <p class="kicker">Homework 2 · P2 of 4 · Control</p>
+    <h1>A slow sensor in the loop</h1>
+    <p class="lede">A controller never sees the real output. It sees what the sensor reports, and a sensor from Homework 1 reports a delayed, smoothed version. The controller reacts to old news, and that is enough to make a well-tuned loop overshoot and then oscillate.</p>
+  </section>
+
+  <details class="theory" open>
+    <summary>Theory in two minutes</summary>
+    <div class="theory-body">
+      <div>
+        <h3>The measured signal</h3>
+        \[ \tau_s\,\dot y_m + y_m = y,\qquad e = r - y_m \]
+        <p>The sensor is the first-order model of Homework 1 with time constant \(\tau_s\). The error is computed from \(y_m\), not from the true output \(y\). In steady state \(y_m=y\), so a sensor lag changes <em>how</em> the loop gets there, not where it ends up.</p>
+      </div>
+      <div>
+        <h3>Why the loop rings</h3>
+        <p>With the plant \(K/(\tau s+1)\) and a sensor \(1/(\tau_s s+1)\), the loop already has two lags. P control gives \(\tau\tau_s s^2+(\tau+\tau_s)s+1+KK_p=0\), whose damping ratio \(\zeta=\dfrac{\tau+\tau_s}{2\sqrt{\tau\tau_s(1+KK_p)}}\) falls as \(\tau_s\) grows.</p>
+      </div>
+      <div>
+        <h3>Why PI can go unstable</h3>
+        <p>Adding \(K_i\) gives a third-order loop: \(\tau\tau_s s^3+(\tau+\tau_s)s^2+(1+KK_p)s+KK_i=0\). It is stable only while</p>
+        \[ (\tau+\tau_s)(1+KK_p) > \tau\,\tau_s\,KK_i . \]
+        <p>When \(\tau_s\) passes this limit the oscillation grows. The control limit then holds it at a steady swing.</p>
+      </div>
+      <div>
+        <h3>The practical lesson</h3>
+        <p>If a loop oscillates, look at the sensor before blaming the gains. A sensor should be several times faster than the process it measures. Otherwise the controller has to be detuned (lower \(K_i\) and \(K_p\)), and the loop gets slower.</p>
+      </div>
+    </div>
+  </details>
+
+  <div id="p2-predict" style="margin-top:16px"></div>
+
+  <h2 style="margin-top:22px" id="p2-title">True output, sensor reading and overshoot</h2>
+  <section class="workspace" aria-labelledby="p2-title">
+    <aside class="card controls" aria-label="Slow sensor controls">
+      <h2>Sensor</h2>
+      <div id="p2-sensor"></div>
+      <h2 style="margin-top:14px">Plant</h2>
+      <div id="p2-plant"></div>
+      <h2 style="margin-top:14px">Controller</h2>
+      <div id="p2-gains"></div>
+      <div id="p2-setpoint"></div>
+      <h2 style="margin-top:14px">Control signal limits</h2>
+      <div id="p2-limits"></div>
+      <h2 style="margin-top:14px">Time window</h2>
+      <div id="p2-time"></div>
+      <h2 style="margin-top:14px">Presets</h2>
+      <div class="preset-row">
+        <button type="button" class="btn ghost" data-preset="fast">Fast sensor: stable</button>
+        <button type="button" class="btn ghost" data-preset="slow">Slow sensor: ringing</button>
+        <button type="button" class="btn ghost" data-preset="vslow">Very slow sensor: oscillates</button>
+        <button type="button" class="btn ghost" data-preset="ponly">P only, Kp = 9</button>
+        <button type="button" class="btn secondary" data-preset="reset">Reset all</button>
+      </div>
+      <p class="ctl-hint">The three sensor presets use the same plant and the same gains (PI: Kp = 2, Ki = 5). Only the sensor changes.</p>
+    </aside>
+
+    <div class="results">
+      <div class="card">
+        <h3>Block diagram: the controller reads the sensor, not the plant</h3>
+        <div class="diagram-wrap" id="p2-diagram"></div>
+      </div>
+      <div class="readouts" id="p2-readouts" aria-live="polite"></div>
+      <div class="status-box" id="p2-status"></div>
+      <div class="card plot-card">
+        <h3>True output and what the sensor reports</h3>
+        <p class="caption">Blue: the real output y. Orange: the sensor reading y<sub>m</sub>, which the controller uses to compute the error. Dashed: the setpoint.</p>
+        <div class="plot tall" id="p2-resp" role="img" aria-label="True output and sensor reading against the setpoint"></div>
+      </div>
+      <div class="plot-grid">
+        <div class="card plot-card">
+          <h3>Control signal u(t)</h3>
+          <p class="caption">When the loop oscillates, u swings with it. The red lines are the actuator limits.</p>
+          <div class="plot small" id="p2-ctrl" role="img" aria-label="Control signal"></div>
+        </div>
+        <div class="card plot-card">
+          <h3>Overshoot of the true output against τs</h3>
+          <p class="caption">Same plant and gains, sensor lag swept from 0 to 5 s. Red crosses mark sensor lags where the loop does not settle. The dotted line is your current τs.</p>
+          <div class="plot small" id="p2-sweep" role="img" aria-label="Overshoot against sensor time constant"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="two-col">
+    <div class="card notes">
+      <h2>What to notice</h2>
+      <ul>
+        <li>Press <strong>Fast sensor</strong>, then <strong>Slow sensor</strong>. The orange curve now trails the blue one, and the blue curve overshoots much further, because the controller keeps pushing while the sensor still says “not there yet”.</li>
+        <li>Press <strong>Very slow sensor</strong>. The loop never settles. u swings between its limits.</li>
+        <li>With <strong>P only</strong>, the loop only rings (it always settles), and the steady-state error stays 10% whatever τs is.</li>
+        <li>Sensors with τs close to the plant’s τ need much lower gains. Try Ki = 1 with τs = 2.5 s.</li>
+      </ul>
+    </div>
+    <div class="card notes">
+      <h2>Engineering meaning</h2>
+      <ul>
+        <li>For the Micromouse speed loop, the “sensor” is the encoder speed estimate. If it is averaged over a long window, it behaves like a lag, and the speed loop will ring.</li>
+        <li>A rule of thumb: the sensor should respond at least 5–10 times faster than the closed loop you want. Otherwise filter less, sample faster, or tune the loop slower.</li>
+        <li>This is the same first-order model you measured in Homework 1, Modules 1 and 2.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer><div class="footer-inner"><span>ENCS4380 Interfacing Techniques · Homework 2 · Birzeit University</span><span id="repo-link"></span></div></footer>
+
+<script defer src="vendor/plotly/plotly.min.js"></script>
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/contrib/auto-render.min.js"></script>
+<script defer src="js/dyn-math.js"></script>
+<script defer src="js/ui.js"></script>
+<script defer src="js/pid-sim.js"></script>
+<script defer src="js/control-ui.js"></script>
+<script defer src="js/p2.js"></script>
+</body>
+</html>

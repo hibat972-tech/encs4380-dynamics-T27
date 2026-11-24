@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>P1 · PID playground · Dynamic Characteristics Toolkit</title>
+  <meta name="description" content="Interactive PID playground: change the plant, Kp, Ki, Kd, the setpoint and the control limits, and watch the output, the control signal, rise time, overshoot, settling time and steady-state error update live.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<noscript><div class="noscript">This toolkit needs JavaScript to draw its plots.</div></noscript>
+<header id="site-header" data-active="p1"></header>
+
+<main>
+  <section class="page-head">
+    <p class="kicker">Homework 2 · P1 of 4 · Control</p>
+    <h1>PID playground</h1>
+    <p class="lede">Close the loop around a Homework 1 plant and see what each term of a PID controller does. Everything below is a numerical simulation of the loop (RK4), recomputed every time a slider moves.</p>
+  </section>
+
+  <details class="theory" open>
+    <summary>Theory in two minutes</summary>
+    <div class="theory-body">
+      <div>
+        <h3>The loop</h3>
+        \[ e = r - y_m,\qquad u = K_p\,e + K_i\!\int e\,dt + K_d\,\frac{de}{dt} \]
+        <p>The controller compares the setpoint \(r\) with the measured output \(y_m\) and drives the plant with \(u\). The actuator can only deliver a limited range, \(u_{min}\le u\le u_{max}\). Here the derivative acts on the measurement, which equals \(de/dt\) for a constant setpoint but avoids an infinite spike when the setpoint jumps.</p>
+      </div>
+      <div>
+        <h3>First-order plant, closed form</h3>
+        <p><strong>P only:</strong> \(\tau_{cl}=\dfrac{\tau}{1+KK_p}\), and \(e_{ss}=\dfrac{1}{1+KK_p}\).</p>
+        <p><strong>PI:</strong> \(\tau s^2+(1+KK_p)s+KK_i=0\), so \(\omega_n=\sqrt{KK_i/\tau}\) and \(\zeta=\dfrac{1+KK_p}{2\sqrt{\tau KK_i}}\).</p>
+        <p><strong>PID:</strong> the first coefficient becomes \(\tau+KK_d\).</p>
+      </div>
+      <div>
+        <h3>What each term does</h3>
+        <div class="table-wrap"><table class="mtable">
+          <thead><tr><th>Raise…</th><th>Rise time</th><th>Overshoot</th><th>Steady-state error</th></tr></thead>
+          <tbody>
+            <tr><td>Kp</td><td>shorter</td><td>grows a little</td><td>smaller, never zero</td></tr>
+            <tr><td>Ki</td><td>shorter</td><td>grows</td><td>goes to zero</td></tr>
+            <tr><td>Kd</td><td>second order: longer; first order: longer</td><td>second order: falls</td><td>unchanged</td></tr>
+          </tbody></table></div>
+        <p class="ctl-hint">D adds damping to a plant that can ring (second order). On a first-order plant it only adds inertia, because the closed loop has \(\tau+KK_d\). Try both.</p>
+      </div>
+      <div>
+        <h3>How the numbers are measured</h3>
+        <p>All four are read off the simulated curve. <strong>Rise time:</strong> 10→90% of the final value \(y_\infty\). <strong>Overshoot:</strong> \(100\,(y_{peak}-y_\infty)/y_\infty\). <strong>Settling time:</strong> the last time the output is outside ±2% of \(y_\infty\). <strong>Steady-state error:</strong> \(r-y_\infty\), with \(y_\infty\) the mean of the last 10% of the run. If the output never settles the page says so instead of showing a number.</p>
+      </div>
+    </div>
+  </details>
+
+  <div id="p1-predict" style="margin-top:16px"></div>
+
+  <h2 style="margin-top:22px" id="p1-title">Loop, response and metrics</h2>
+  <section class="workspace" aria-labelledby="p1-title">
+    <aside class="card controls" aria-label="PID playground controls">
+      <h2>Plant</h2>
+      <div id="p1-plant"></div>
+      <h2 style="margin-top:14px">Controller</h2>
+      <div id="p1-gains"></div>
+      <div id="p1-setpoint"></div>
+      <h2 style="margin-top:14px">Control signal limits</h2>
+      <div id="p1-limits"></div>
+      <h2 style="margin-top:14px">Time window</h2>
+      <div id="p1-time"></div>
+      <h2 style="margin-top:14px">Presets</h2>
+      <div class="preset-row">
+        <button type="button" class="btn ghost" data-preset="v1">Check 1: P only, Kp = 9</button>
+        <button type="button" class="btn ghost" data-preset="v2">Check 2: PI, Kp = 1, Ki = 1</button>
+        <button type="button" class="btn ghost" data-preset="poi">P → add I (Kp = 9, Ki = 40)</button>
+        <button type="button" class="btn ghost" data-preset="d2">Second order: add D</button>
+        <button type="button" class="btn secondary" data-preset="reset">Reset all</button>
+      </div>
+      <p class="ctl-hint">The two “Check” presets are the validation cases from the assignment. The <a href="control-validation.html">Validation page</a> measures them.</p>
+    </aside>
+
+    <div class="results">
+      <div class="card">
+        <h3>Block diagram of the loop being simulated</h3>
+        <div class="diagram-wrap" id="p1-diagram"></div>
+      </div>
+      <div class="readouts" id="p1-readouts" aria-live="polite"></div>
+      <div class="status-box" id="p1-status"></div>
+      <div class="card plot-card">
+        <h3>Output against setpoint</h3>
+        <p class="caption">Dashed: setpoint. Blue: output. The shaded band is ±2% of the final value; the dotted green line marks the settling time.</p>
+        <div class="plot tall" id="p1-resp" role="img" aria-label="Closed-loop output against setpoint"></div>
+      </div>
+      <div class="card plot-card">
+        <h3>Control signal u(t) and its limits</h3>
+        <p class="caption">Orange: the signal the actuator receives. Red dashed lines: the limits. Grey dotted: what the controller asked for before the limit (visible while saturated).</p>
+        <div class="plot" id="p1-ctrl" role="img" aria-label="Control signal with its limits"></div>
+      </div>
+      <div class="card plot-card">
+        <h3>Where u comes from: the P, I and D parts</h3>
+        <p class="caption">u is the sum of the three curves (before the limit). Watch the I part grow while an error remains, and the D part react only while the output is moving.</p>
+        <div class="plot small" id="p1-terms" role="img" aria-label="Proportional, integral and derivative contributions"></div>
+      </div>
+      <div class="card">
+        <h3>Closed-loop equation for the current settings</h3>
+        <div id="p1-eq"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="two-col">
+    <div class="card notes">
+      <h2>What to notice</h2>
+      <ul>
+        <li><strong>P only:</strong> raise Kp and the response speeds up, but a steady-state error 1/(1 + K·Kp) remains. With Kp = 9 it is 10%.</li>
+        <li><strong>Add I:</strong> the error goes to zero. The price is overshoot, because the integral keeps pushing after the output arrives.</li>
+        <li><strong>Add D (second-order plant):</strong> the ringing is damped. Compare the overshoot with Kd = 0 and Kd = 0.6.</li>
+        <li><strong>Lower the limits:</strong> u cannot follow the controller, the rise slows down, and the grey dotted curve shows what was asked for.</li>
+      </ul>
+    </div>
+    <div class="card notes">
+      <h2>Engineering meaning</h2>
+      <ul>
+        <li>Most real loops start as PI. D is added only when the plant rings or the response must be calmed, and it amplifies sensor noise.</li>
+        <li>With a limit on u, a large integral can wind up. Turn anti-windup off and compare the overshoot. P3 studies this in the digital controller.</li>
+        <li>For a motor speed loop, K and τ come from a PWM step test. The <a href="mysystem.html">My System</a> page does that for the project motor.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer><div class="footer-inner"><span>ENCS4380 Interfacing Techniques · Homework 2 · Birzeit University</span><span id="repo-link"></span></div></footer>
+
+<script defer src="vendor/plotly/plotly.min.js"></script>
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/contrib/auto-render.min.js"></script>
+<script defer src="js/dyn-math.js"></script>
+<script defer src="js/ui.js"></script>
+<script defer src="js/pid-sim.js"></script>
+<script defer src="js/control-ui.js"></script>
+<script defer src="js/p1.js"></script>
+</body>
+</html>

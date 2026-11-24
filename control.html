@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Control · PID Toolkit (Homework 2) · Dynamic Characteristics Toolkit</title>
+  <meta name="description" content="Homework 2: a PID control toolkit built on the Homework 1 sensor models. PID playground, a slow sensor in the loop, digital PID with Arduino code, a tuning challenge, the project motor, validation checks and Ziegler–Nichols tuning.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<noscript><div class="noscript">This toolkit needs JavaScript to draw its plots.</div></noscript>
+<header id="site-header" data-active="control"></header>
+
+<main>
+  <section class="hero">
+    <div>
+      <p class="kicker" style="color:var(--muted);font-weight:600">ENCS4380 Interfacing Techniques, Homework 2</p>
+      <h1>Control: the PID toolkit</h1>
+      <p class="lede">Homework 1 showed how slow a sensor or a plant is. Homework 2 shows how to make it faster and more accurate with feedback. The same first-order and second-order models drive every simulation here, and each page steps the closed loop forward in time with RK4.</p>
+      <p>On the right, a plant with \(K=1\) and \(\tau=1\) s: on its own it needs 3 s to reach 95%. Add a P controller and the loop gets faster, but stops short of the target. Try the three gains.</p>
+      <div class="btn-row">
+        <a class="btn" href="p1.html" style="text-decoration:none">Start with P1: PID playground</a>
+        <a class="btn secondary" href="control-validation.html" style="text-decoration:none">See the validation checks</a>
+      </div>
+    </div>
+    <div class="card plot-card">
+      <h3>Live demo: first-order plant, K = 1, τ = 1 s</h3>
+      <div class="two-col" style="gap:4px 18px;padding:0 8px" id="hub-controls"></div>
+      <div class="readouts" id="hub-readouts" style="margin:6px 8px" aria-live="polite"></div>
+      <div class="plot small" id="hub-plot" role="img" aria-label="Closed-loop response of the demo plant"></div>
+    </div>
+  </section>
+
+  <section style="margin-top:28px">
+    <h2>The four modules, the project page and the bonus</h2>
+    <div class="hub-grid">
+      <a class="card module-card" href="p1.html">
+        <span class="m-num">P1 <span class="m-pts">· PID playground</span></span>
+        <h3>Each gain, one at a time</h3>
+        <p>First- or second-order plant, Kp, Ki, Kd, setpoint step and control limits. Block diagram, output against setpoint, control signal with its limits, and live rise time, overshoot, settling time and steady-state error.</p>
+        <span class="m-open">Open P1</span>
+      </a>
+      <a class="card module-card" href="p2.html">
+        <span class="m-num">P2 <span class="m-pts">· A slow sensor in the loop</span></span>
+        <h3>The controller only sees the sensor</h3>
+        <p>A first-order sensor in the feedback path. True output and sensor reading on one plot. Raise τs and the overshoot grows until the loop oscillates.</p>
+        <span class="m-open">Open P2</span>
+      </a>
+      <a class="card module-card" href="p3.html">
+        <span class="m-num">P3 <span class="m-pts">· Digital PID</span></span>
+        <h3>Sample, compute, hold</h3>
+        <p>The assignment’s digital PID with a stair-step control signal, sampling time, saturation and anti-windup. Performance against Ts, windup presets, and Arduino code with a Copy button.</p>
+        <span class="m-open">Open P3</span>
+      </a>
+      <a class="card module-card" href="p4.html">
+        <span class="m-num">P4 <span class="m-pts">· Tuning challenge</span></span>
+        <h3>Meet the spec on a hidden plant</h3>
+        <p>A random plant from Homework 1 and a specification for overshoot, settling time and steady-state error. PASS or FAIL on each part, and a score.</p>
+        <span class="m-open">Open P4</span>
+      </a>
+      <a class="card module-card" href="mysystem.html">
+        <span class="m-num">My System <span class="m-pts">· project application</span></span>
+        <h3>The Micromouse drive motor</h3>
+        <p>K and τ from a PWM step test (or typed in), a PI design with ζ between 0.6 and 0.8, PWM kept inside 0 to 100%, the simulated response and the Arduino code.</p>
+        <span class="m-open">Open My System</span>
+      </a>
+      <a class="card module-card" href="control-validation.html">
+        <span class="m-num">Validation <span class="m-pts">· three checks</span></span>
+        <h3>Expected against simulated</h3>
+        <p>P only (Kp = 9), PI (Kp = 1, Ki = 1) and zero steady-state error for any stable PI loop, each with expected value, simulated value, deviation and pass or fail.</p>
+        <div class="vsummary" id="hub-vsummary" style="margin-bottom:6px"></div>
+        <span class="m-open">Open the checks</span>
+      </a>
+      <a class="card module-card" href="zn.html">
+        <span class="m-num">Bonus <span class="m-pts">· Ziegler–Nichols</span></span>
+        <h3>Find Ku and Pu, then tune</h3>
+        <p>Find the gain where a P loop oscillates forever, read the period, apply the Ziegler–Nichols rules and compare before and after. Simulation only.</p>
+        <span class="m-open">Open the bonus</span>
+      </a>
+      <a class="card module-card" href="index.html#modules">
+        <span class="m-num">Homework 1 <span class="m-pts">· sensor dynamics</span></span>
+        <h3>The models behind it</h3>
+        <p>First-order time and frequency response, second-order response with state space, and Guess the sensor. These plants and sliders are reused here.</p>
+        <span class="m-open">Go to Homework 1</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="two-col" style="margin-top:16px">
+    <div class="card">
+      <h2>How Homework 2 builds on Homework 1</h2>
+      <svg viewBox="0 0 560 250" width="100%" role="img" aria-label="Diagram: the Homework 1 plant models and random sensor feed the closed-loop engine, which drives P1 to P4, My System and the bonus.">
+        <defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#3d4c5c"/></marker></defs>
+        <g font-family="system-ui, sans-serif" font-size="13" fill="#15273a">
+          <rect x="10" y="14" width="250" height="56" rx="8" fill="#eef4fb" stroke="#1d4f86"/>
+          <text x="135" y="38" text-anchor="middle" font-weight="700">Homework 1 models</text>
+          <text x="135" y="57" text-anchor="middle" fill="#3d4c5c">first order, second order, random sensor</text>
+          <rect x="300" y="14" width="250" height="56" rx="8" fill="#fff6ec" stroke="#c4621f"/>
+          <text x="425" y="38" text-anchor="middle" font-weight="700">New: closed-loop engine</text>
+          <text x="425" y="57" text-anchor="middle" fill="#3d4c5c">RK4, sensor, saturation, digital PID</text>
+          <line x1="260" y1="42" x2="296" y2="42" stroke="#3d4c5c" stroke-width="1.6" marker-end="url(#ah2)"/>
+          <rect x="10" y="110" width="120" height="50" rx="8" fill="#fff" stroke="#b9c5d1"/><text x="70" y="140" text-anchor="middle">P1 playground</text>
+          <rect x="146" y="110" width="120" height="50" rx="8" fill="#fff" stroke="#b9c5d1"/><text x="206" y="140" text-anchor="middle">P2 slow sensor</text>
+          <rect x="282" y="110" width="120" height="50" rx="8" fill="#fff" stroke="#b9c5d1"/><text x="342" y="140" text-anchor="middle">P3 digital PID</text>
+          <rect x="418" y="110" width="132" height="50" rx="8" fill="#fff" stroke="#b9c5d1"/><text x="484" y="140" text-anchor="middle">P4 tuning challenge</text>
+          <line x1="425" y1="72" x2="70" y2="108" stroke="#9aa5b1" stroke-width="1.3" stroke-dasharray="4 3"/>
+          <line x1="425" y1="72" x2="206" y2="108" stroke="#9aa5b1" stroke-width="1.3" stroke-dasharray="4 3"/>
+          <line x1="425" y1="72" x2="342" y2="108" stroke="#9aa5b1" stroke-width="1.3" stroke-dasharray="4 3"/>
+          <line x1="425" y1="72" x2="484" y2="108" stroke="#9aa5b1" stroke-width="1.3" stroke-dasharray="4 3"/>
+          <rect x="10" y="190" width="258" height="46" rx="8" fill="#fff" stroke="#b9c5d1"/><text x="139" y="218" text-anchor="middle">My System: motor K, τ, design, code</text>
+          <rect x="292" y="190" width="258" height="46" rx="8" fill="#fff" stroke="#b9c5d1"/><text x="421" y="218" text-anchor="middle">Validation checks and Ziegler–Nichols</text>
+        </g>
+      </svg>
+    </div>
+    <div class="card">
+      <h2>Validation status</h2>
+      <div class="vsummary" id="hub-vsummary2"></div>
+      <p class="ctl-hint" style="margin-top:8px">The three checks from Section 2.1 of the assignment are computed live, in your browser, by the same engine that draws the plots. The <a href="control-validation.html">Validation page</a> shows the expected value, the simulated value, the deviation and the result.</p>
+      <h3 style="margin-top:14px">Definitions used on every page</h3>
+      <ul class="notes" style="margin:0;padding-left:1.2em">
+        <li><strong>Rise time:</strong> 10% to 90% of the final value.</li>
+        <li><strong>Overshoot:</strong> peak above the final value, in %.</li>
+        <li><strong>Settling time:</strong> last time the output is outside ±2% of the final value.</li>
+        <li><strong>Steady-state error:</strong> setpoint minus final value, also in % of the setpoint.</li>
+        <li>If the output never settles, the page says so instead of printing a number.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:16px">
+    <h2>Suggested 10-minute demo route</h2>
+    <ol style="padding-left:1.2em;margin:0">
+      <li><strong>Hub (30 s):</strong> the live demo. Move Kp, then Ki.</li>
+      <li><strong>P1 (2.5 min):</strong> “Check 1” preset (Kp = 9: 10% error), then add I, then D on the second-order plant. Point at the P, I and D plot.</li>
+      <li><strong>P2 (2 min):</strong> Fast, Slow, Very slow sensor presets. Show the sweep plot.</li>
+      <li><strong>P3 (2.5 min):</strong> Ts = 0.01 s, then 0.9 s. Windup presets. Press Copy code.</li>
+      <li><strong>P4 (1 min):</strong> play one round, run the step test, tune it.</li>
+      <li><strong>My System and Validation (1.5 min):</strong> the design checks, then three passes.</li>
+    </ol>
+  </section>
+</main>
+
+<footer><div class="footer-inner"><span>ENCS4380 Interfacing Techniques · Homework 2 · Birzeit University</span><span id="repo-link"></span></div></footer>
+
+<script defer src="vendor/plotly/plotly.min.js"></script>
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/contrib/auto-render.min.js"></script>
+<script defer src="js/dyn-math.js"></script>
+<script defer src="js/ui.js"></script>
+<script defer src="js/pid-sim.js"></script>
+<script defer src="js/control-validation.js"></script>
+<script defer src="js/control-ui.js"></script>
+<script defer src="js/control-hub.js"></script>
+</body>
+</html>

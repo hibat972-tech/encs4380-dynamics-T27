@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Validation · Homework 2 · Dynamic Characteristics Toolkit</title>
+  <meta name="description" content="The three validation checks of Homework 2, computed live from the RK4 closed-loop simulation: expected value, actual value, deviation and pass or fail.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<noscript><div class="noscript">This toolkit needs JavaScript to draw its plots.</div></noscript>
+<header id="site-header" data-active="validation"></header>
+
+<main>
+  <section class="page-head">
+    <p class="kicker">Homework 2 · Section 2.1 of the assignment</p>
+    <h1>Validation checks</h1>
+    <p class="lede">Before trusting the PID toolkit, it has to reproduce three results for the plant \(G(s)=K/(\tau s+1)\) with \(K=1\) and \(\tau=1\) s. Each check below runs the closed-loop RK4 simulation when the page loads and compares what it measures with the formulas from the assignment.</p>
+  </section>
+
+  <section class="card">
+    <div class="vsummary" id="cv-summary"></div>
+    <p class="ctl-hint" style="margin:10px 0 0" id="cv-time"></p>
+    <div class="btn-row" style="margin-top:10px"><button type="button" class="btn secondary" id="cv-rerun">Run the checks again</button></div>
+  </section>
+
+  <section class="card">
+    <h2>How a check passes</h2>
+    <ul style="margin:0;padding-left:1.2em">
+      <li><strong>Expected</strong> comes from the formulas in the assignment. <strong>Actual</strong> is measured on the simulated response: read off the curve (63.2% point, slope of a log plot, final value), from the eigenvalues of the closed-loop state matrix, or compared point by point with an exact solution.</li>
+      <li><strong>Deviation</strong> is actual minus expected. A row passes when |deviation| ≤ its <strong>tolerance</strong>. A test passes only if every row passes.</li>
+      <li><strong>Tolerances</strong> are small: 2% on a time constant, 0.05 percentage points on a steady-state error, 0.001 on ωn and ζ, and 10⁻⁴ on a curve compared with its exact solution. The RK4 step is chosen so the method error is far below these, so the tolerance covers read-off error only.</li>
+      <li><strong>No control limit.</strong> With Kp = 9 the first control value is u = 9. A realistic limit would clip it, and the loop would no longer be the linear loop the formulas describe. The last row of Test 1 shows what a 0 to 1 limit would do.</li>
+      <li>Nothing is typed in as passing. Change the controller in <code>js/pid-sim.js</code> and the affected checks turn to Fail. The same checks run from the command line with <code>npm test</code>.</li>
+    </ul>
+  </section>
+
+  <section id="cv-tests"></section>
+</main>
+
+<footer><div class="footer-inner"><span>ENCS4380 Interfacing Techniques · Homework 2 · Birzeit University</span><span id="repo-link"></span></div></footer>
+
+<script defer src="vendor/plotly/plotly.min.js"></script>
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/contrib/auto-render.min.js"></script>
+<script defer src="js/dyn-math.js"></script>
+<script defer src="js/ui.js"></script>
+<script defer src="js/pid-sim.js"></script>
+<script defer src="js/control-validation.js"></script>
+<script defer src="js/control-ui.js"></script>
+<script defer src="js/control-validation-page.js"></script>
+</body>
+</html>

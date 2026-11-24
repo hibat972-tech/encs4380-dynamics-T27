@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bonus · Ziegler–Nichols tuning · Dynamic Characteristics Toolkit</title>
+  <meta name="description" content="Bonus: find the ultimate gain Ku where a proportional loop oscillates forever, measure the period Pu, apply the Ziegler–Nichols rules and compare the response before and after tuning.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<noscript><div class="noscript">This toolkit needs JavaScript to draw its plots.</div></noscript>
+<header id="site-header" data-active="zn"></header>
+
+<main>
+  <section class="page-head">
+    <p class="kicker">Homework 2 · Bonus (Ziegler–Nichols tuning) · separate from P1 to P4</p>
+    <h1>Ziegler–Nichols tuning</h1>
+    <p class="lede">Raise Kp, with Ki = Kd = 0, until the loop just oscillates forever. That gain is the ultimate gain \(K_u\), and the time between peaks is the ultimate period \(P_u\). Two numbers are enough to set a PID controller.</p>
+  </section>
+
+  <div class="note-box warn" role="note"><strong>Simulation only.</strong> Every number on this page comes from the simulated loop. Nothing here was measured on hardware. On a real robot you would raise Kp slowly until the speed oscillates steadily, read the period from the encoder log, and keep the loop away from the limits.</div>
+
+  <details class="theory" open style="margin-top:16px">
+    <summary>Method and limitations</summary>
+    <div class="theory-body">
+      <div>
+        <h3>The closed-loop method</h3>
+        <ol style="margin:0;padding-left:1.2em">
+          <li>Set \(K_i=K_d=0\). Increase \(K_p\) until the output oscillates with constant amplitude. This gain is \(K_u\); the period of the oscillation is \(P_u\).</li>
+          <li>Set the gains from the table below.</li>
+        </ol>
+        <p style="margin-top:8px">Here \(K_u\) is found two ways. <strong>Time domain:</strong> bisection on \(K_p\), simulating the loop with RK4 and checking whether the peaks grow or decay. <strong>Frequency domain:</strong> at the frequency where the open-loop phase is −180°, \(K_u=1/|G(j\omega_u)|\) and \(P_u=2\pi/\omega_u\). They should agree.</p>
+      </div>
+      <div>
+        <h3>The rules</h3>
+        <div class="table-wrap"><table class="mtable">
+          <thead><tr><th>Controller</th><th>Kp</th><th>Ti</th><th>Td</th></tr></thead>
+          <tbody>
+            <tr><td>P</td><td>0.5 Ku</td><td>—</td><td>—</td></tr>
+            <tr><td>PI</td><td>0.45 Ku</td><td>Pu / 1.2</td><td>—</td></tr>
+            <tr><td>PID</td><td>0.6 Ku</td><td>Pu / 2</td><td>Pu / 8</td></tr>
+          </tbody></table></div>
+        <p class="ctl-hint">With \(K_i=K_p/T_i\) and \(K_d=K_pT_d\).</p>
+      </div>
+      <div>
+        <h3>Limitations</h3>
+        <ul style="margin:0;padding-left:1.2em">
+          <li><strong>Not every plant has a \(K_u\).</strong> A first-order or second-order plant with P control is stable for every gain. The loop needs at least three lags (for example a plant plus a sensor lag) or a delay before it can oscillate.</li>
+          <li>The rules aim for a fast decay (about a quarter of the amplitude per cycle). They typically give 25% to 50% overshoot, which is often too much.</li>
+          <li>On hardware, driving a machine into sustained oscillation can damage it, and the actuator limits distort the oscillation.</li>
+          <li>Two numbers describe the plant only roughly. Treat the result as a starting point, then fine-tune.</li>
+        </ul>
+      </div>
+    </div>
+  </details>
+
+  <div id="zn-predict" style="margin-top:16px"></div>
+
+  <h2 style="margin-top:22px" id="zn-title">Find Ku and Pu, then tune</h2>
+  <section class="workspace" aria-labelledby="zn-title">
+    <aside class="card controls" aria-label="Ziegler-Nichols controls">
+      <h2>Plant</h2>
+      <div id="zn-plant"></div>
+      <h2 style="margin-top:14px">Extra lags in the loop</h2>
+      <div id="zn-lags"></div>
+      <div class="preset-row">
+        <button type="button" class="btn ghost" data-preset="second">Second order + sensor lag</button>
+        <button type="button" class="btn ghost" data-preset="first3">First order + sensor + driver lag</button>
+        <button type="button" class="btn ghost" data-preset="first">First order alone: no Ku</button>
+        <button type="button" class="btn ghost" data-preset="motor">Project motor + illustrative lags</button>
+      </div>
+      <p class="ctl-hint">The lags in the last preset are <strong>illustrative values</strong>, not measurements of our robot.</p>
+      <h2 style="margin-top:14px">Rule to apply</h2>
+      <div id="zn-rule"></div>
+      <h2 style="margin-top:14px">“Before” controller</h2>
+      <div id="zn-before"></div>
+    </aside>
+
+    <div class="results">
+      <div class="card" id="zn-ult"></div>
+      <div class="status-box" id="zn-status"></div>
+      <div class="card plot-card">
+        <h3>Finding Ku: P only, below, at and above the ultimate gain</h3>
+        <p class="caption">Kp = 0.8·Ku decays, Kp = Ku keeps a constant amplitude, Kp = 1.2·Ku grows. The time between two peaks of the constant oscillation is Pu. (Linear loop, no control limit.)</p>
+        <div class="plot tall" id="zn-osc" role="img" aria-label="Proportional-only responses around the ultimate gain"></div>
+      </div>
+      <div class="card">
+        <h3>Ziegler–Nichols gains</h3>
+        <div class="table-wrap"><table class="spec-table"><thead><tr><th>Rule</th><th>Kp</th><th>Ki</th><th>Kd</th></tr></thead><tbody id="zn-table"></tbody></table></div>
+      </div>
+      <div class="readouts" id="zn-metrics"></div>
+      <div class="card plot-card">
+        <h3>Before and after tuning</h3>
+        <p class="caption">Same plant, same lags, same setpoint step. Grey: your “before” controller. Blue: the Ziegler–Nichols controller.</p>
+        <div class="plot tall" id="zn-compare" role="img" aria-label="Response before and after Ziegler-Nichols tuning"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer><div class="footer-inner"><span>ENCS4380 Interfacing Techniques · Homework 2 · Birzeit University</span><span id="repo-link"></span></div></footer>
+
+<script defer src="vendor/plotly/plotly.min.js"></script>
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/contrib/auto-render.min.js"></script>
+<script defer src="js/dyn-math.js"></script>
+<script defer src="js/ui.js"></script>
+<script defer src="js/pid-sim.js"></script>
+<script defer src="js/control-ui.js"></script>
+<script defer src="js/zn.js"></script>
+</body>
+</html>

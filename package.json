@@ -1,9 +1,11 @@
 {
   "name": "encs4380-dynamics-toolkit",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Dynamic Characteristics Interactive Toolkit - ENCS4380 Homework 1 (static site, no build step)",
+  "description": "Dynamic Characteristics Interactive Toolkit - ENCS4380 Homework 1 (sensor dynamics) and Homework 2 (PID control). Static site, no build step.",
   "scripts": {
-    "test": "node tests/dyn-math.test.js"
+    "test": "node tests/dyn-math.test.js && node tests/pid-sim.test.js",
+    "test:hw1": "node tests/dyn-math.test.js",
+    "test:hw2": "node tests/pid-sim.test.js"
   }
 }

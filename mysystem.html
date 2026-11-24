@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My System · Micromouse drive motor · Dynamic Characteristics Toolkit</title>
+  <meta name="description" content="The project application: the Micromouse drive motor as a first-order plant, K and τ from a PWM step test, a PI speed controller with damping ratio 0.6 to 0.8, PWM kept inside 0 to 100%, and the Arduino code.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<noscript><div class="noscript">This toolkit needs JavaScript to draw its plots.</div></noscript>
+<header id="site-header" data-active="mysystem"></header>
+
+<main>
+  <section class="page-head">
+    <p class="kicker">Homework 2 · Applying it to our project</p>
+    <h1>My System: the Micromouse drive motor</h1>
+    <p class="lede">The drive motor is the first-order plant: PWM duty (in %) goes in, wheel speed from the encoder comes out. This page takes K and τ (measured, or typed in), designs a PI speed controller for a damping ratio between 0.6 and 0.8, checks that the PWM command stays between 0 and 100%, and produces the Arduino code.</p>
+  </section>
+
+  <div id="ms-banner"></div>
+
+  <!-- ===================== 1. Plant ===================== -->
+  <h2 id="s1" style="margin-top:22px">1. The plant and where its numbers come from</h2>
+  <section class="two-col">
+    <div class="card">
+      <h3>Plant parameters</h3>
+      <div class="field-grid">
+        <div class="field"><label for="ms-K">Gain K (speed units per % PWM)</label><input id="ms-K" type="number" step="any" min="0" inputmode="decimal"></div>
+        <div class="field"><label for="ms-tau">Time constant τ (s)</label><input id="ms-tau" type="number" step="any" min="0" inputmode="decimal"></div>
+        <div class="field"><label for="ms-units">Speed unit (label)</label><input id="ms-units" type="text" maxlength="12"></div>
+      </div>
+      <div class="field-grid" style="margin-top:10px">
+        <div class="field"><label for="ms-status">Where do K and τ come from?</label>
+          <select id="ms-status">
+            <option value="illustrative">Illustrative placeholder (not measured)</option>
+            <option value="measured">Measured by our group (PWM step test + encoder)</option>
+            <option value="datasheet">From a datasheet (cite it below)</option>
+          </select></div>
+      </div>
+      <div class="field" style="margin-top:10px"><label for="ms-source">Source: how, when and under what conditions</label>
+        <textarea id="ms-source" style="min-height:70px" placeholder="Example: PWM step 0 to 50%, encoder speed logged every 5 ms, battery at 7.4 V, wheels off the ground, date…"></textarea>
+        <div class="ctl-hint">This text is saved in your browser and is printed in the header of the generated Arduino code.</div></div>
+      <div id="ms-source-msg" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <h3>Plant model</h3>
+      <div id="ms-tf"></div>
+      <p class="ctl-hint">Step test: apply a PWM step of size ΔU from rest and log the encoder speed. Then</p>
+      <ul class="notes" style="margin:0;padding-left:1.2em">
+        <li><strong>K = Δy / ΔU</strong>: the change in final speed divided by the PWM step.</li>
+        <li><strong>τ</strong> = the time for the speed to reach <strong>63.2%</strong> of its total change (also estimated from the slope −1/τ of ln(1 − y/y<sub>final</sub>)).</li>
+      </ul>
+      <p class="ctl-hint" style="margin-top:8px">Both formulas are the Homework 1, Module 1 results. The tool below applies them to your logged data.</p>
+    </div>
+  </section>
+
+  <div class="card" style="margin-top:16px">
+    <h3>Compute K and τ from a logged PWM step test</h3>
+    <div class="field-grid">
+      <div class="field"><label for="ms-pwm">PWM step size ΔU (% duty)</label><input id="ms-pwm" type="number" step="any" min="0" value="50" inputmode="decimal"></div>
+      <div class="field"><label for="ms-tstep">Time of the step (s)</label><input id="ms-tstep" type="number" step="any" value="0" inputmode="decimal"><div class="ctl-hint">Samples before this time give the starting speed.</div></div>
+    </div>
+    <div class="field" style="margin-top:10px">
+      <label for="ms-data">Paste the log: one line per sample, “time_s, speed” (comma, tab or space separated; header lines are skipped)</label>
+      <textarea id="ms-data" spellcheck="false" placeholder="0.000, 0&#10;0.005, 11.9&#10;0.010, 22.7&#10;…"></textarea>
+    </div>
+    <div class="btn-row" style="margin-top:8px">
+      <button type="button" class="btn" id="ms-compute">Compute K and τ</button>
+      <button type="button" class="btn ghost" id="ms-example">Load a synthetic example (to try the tool)</button>
+      <button type="button" class="btn ghost" id="ms-cleardata">Clear</button>
+    </div>
+    <div id="ms-fit-msg" style="margin-top:10px"></div>
+    <div class="plot small" id="ms-fit-plot" role="img" aria-label="Logged step test and fitted first-order model" hidden></div>
+    <details class="more" style="margin-top:8px">
+      <summary>How to log the step test (what we still need to measure)</summary>
+      <ol style="padding-left:1.2em;margin:6px 0">
+        <li>Put the robot on a stand so the wheels spin freely, or run it on a long clear straight. Use a fully charged battery and note its voltage.</li>
+        <li>With the motor at rest, command a constant PWM step (for example 50%) and log the encoder speed every 2 to 10 ms for about 10 time constants (about 1 s).</li>
+        <li>Convert encoder counts per sample to your speed unit (for example mm/s) and paste “time, speed” here.</li>
+        <li>Repeat at two or three different PWM levels. If K changes a lot between levels the motor is not linear there (dead zone or saturation). Use the level around your cruising speed.</li>
+        <li>Keep the log file. Your report should cite it.</li>
+      </ol>
+      <pre class="codebox" style="background:#0f2236;color:#e6eef7;padding:10px;border-radius:8px;overflow:auto;font-size:.82rem"><code>// Step-test logger (adapt the three constants to your hardware)
+const int MOTOR_PWM_PIN = 9;          // your motor driver PWM pin
+const float PWM_STEP_PERCENT = 50.0f; // size of the step
+const unsigned long LOG_US = 5000UL;  // log every 5 ms
+volatile long encoderCount = 0;       // increment this in your encoder interrupt
+unsigned long t0, nextTick; long lastCount = 0;
+void setup() {
+  Serial.begin(115200);
+  pinMode(MOTOR_PWM_PIN, OUTPUT);
+  delay(2000);                        // motor at rest
+  t0 = micros(); nextTick = t0 + LOG_US;
+  analogWrite(MOTOR_PWM_PIN, (int)(PWM_STEP_PERCENT * 2.55f));   // the step happens at t = 0
+}
+void loop() {
+  if ((long)(micros() - nextTick) < 0) return;
+  nextTick += LOG_US;
+  long c = encoderCount;
+  float speed = (c - lastCount) / (LOG_US * 1e-6f);   // counts per second; convert to mm/s with your calibration
+  lastCount = c;
+  Serial.print((micros() - t0) * 1e-6f, 4); Serial.print(','); Serial.println(speed);
+  if (micros() - t0 > 1500000UL) analogWrite(MOTOR_PWM_PIN, 0);  // stop after 1.5 s
+}</code></pre>
+    </details>
+  </div>
+
+  <!-- ===================== 2. Spec ===================== -->
+  <h2 id="s2" style="margin-top:28px">2. The specification we chose, and why</h2>
+  <section class="two-col">
+    <div class="card">
+      <h3>Specification</h3>
+      <div class="field-grid">
+        <div class="field"><label for="ms-sp">Cruising speed step r (speed units)</label><input id="ms-sp" type="number" step="any" min="0" inputmode="decimal"></div>
+        <div class="field"><label for="ms-ts">Settling time target, ±2% (s)</label><input id="ms-ts" type="number" step="any" min="0" inputmode="decimal"></div>
+        <div class="field"><label for="ms-os">Overshoot limit (%)</label><input id="ms-os" type="number" step="any" min="0" inputmode="decimal"></div>
+        <div class="field"><label for="ms-zeta">Damping ratio ζ (0.6 to 0.8)</label><input id="ms-zeta" type="number" step="0.01" min="0.1" max="2" inputmode="decimal"></div>
+        <div class="field"><label for="ms-Ts">Sampling time Ts (ms)</label><input id="ms-Ts" type="number" step="any" min="0.1" inputmode="decimal"></div>
+      </div>
+      <p class="ctl-hint">PWM limits are fixed at 0 to 100% (the driver cannot do more). The steady-state error must be zero (we accept ≤ 1%).</p>
+    </div>
+    <div class="card">
+      <h3>Why these numbers matter for the Micromouse</h3>
+      <ul class="notes" style="margin:0;padding-left:1.2em" id="ms-why"></ul>
+      <div class="field" style="margin-top:10px"><label for="ms-notes">Our own notes (saved in this browser)</label>
+        <textarea id="ms-notes" style="min-height:70px" placeholder="Add anything specific to our maze strategy, speeds, battery…"></textarea></div>
+    </div>
+  </section>
+
+  <!-- ===================== 3. Design ===================== -->
+  <h2 id="s3" style="margin-top:28px">3. Controller design</h2>
+  <section class="two-col">
+    <div class="card">
+      <h3>PI design for a first-order plant</h3>
+      <p>With \(u=K_pe+K_i\!\int e\,dt\) the closed loop is \(\tau s^2+(1+KK_p)s+KK_i=0\). Matching it to \(s^2+2\zeta\omega_ns+\omega_n^2\) gives</p>
+      \[ \omega_n=\frac{4}{\zeta\,t_s},\qquad K_p=\frac{2\zeta\tau\omega_n-1}{K},\qquad K_i=\frac{\tau\,\omega_n^2}{K} \]
+      <p class="ctl-hint">The settling time \(t_s\approx4/(\zeta\omega_n)\) is the usual 2% estimate. The PI zero adds a little overshoot beyond the second-order formula, so the simulation below is the judge.</p>
+      <div class="field-grid" style="margin-top:8px">
+        <div class="field"><label for="ms-Kp">Kp (% PWM per speed unit)</label><input id="ms-Kp" type="number" step="any" min="0" inputmode="decimal"></div>
+        <div class="field"><label for="ms-Ki">Ki (% PWM per speed unit·s)</label><input id="ms-Ki" type="number" step="any" min="0" inputmode="decimal"></div>
+      </div>
+      <label class="check" style="margin-top:8px"><input type="checkbox" id="ms-override"> Use my own gains instead of the designed ones</label>
+      <div id="ms-design-msg" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <h3>Final gains and checks</h3>
+      <div class="readouts" id="ms-gains" style="margin-bottom:10px"></div>
+      <div class="table-wrap"><table class="spec-table"><thead><tr><th>Check</th><th>Target</th><th>Result</th><th></th></tr></thead><tbody id="ms-checks"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ===================== 4. Response ===================== -->
+  <h2 id="s4" style="margin-top:28px">4. Simulated motor response</h2>
+  <div class="readouts" id="ms-readouts" aria-live="polite"></div>
+  <div class="status-box" id="ms-status-box" style="margin-top:12px"></div>
+  <div class="plot-grid" style="margin-top:16px">
+    <div class="card plot-card">
+      <h3>Wheel speed against the setpoint</h3>
+      <p class="caption">Continuous controller (blue) and the digital controller at the chosen Ts (green dots, one per sample).</p>
+      <div class="plot tall" id="ms-resp" role="img" aria-label="Simulated wheel speed"></div>
+    </div>
+    <div class="card plot-card">
+      <h3>PWM command and its 0 to 100% limits</h3>
+      <p class="caption">The command is the control signal u in % duty. Red dashed lines are the limits.</p>
+      <div class="plot tall" id="ms-ctrl" role="img" aria-label="PWM command with limits"></div>
+    </div>
+  </div>
+
+  <!-- ===================== 5. Code ===================== -->
+  <h2 id="s5" style="margin-top:28px">5. Arduino code</h2>
+  <div id="ms-code"></div>
+
+  <!-- ===================== 6. Reuse ===================== -->
+  <h2 id="s6" style="margin-top:28px">6. Use this motor in P1, P2 and P3</h2>
+  <section class="card">
+    <p>The numbers on this page are saved in this browser. On P1, P2 and P3, press <strong>“Use my project motor (My System page)”</strong> to load K, τ, the setpoint, the PWM limits and the designed gains.</p>
+    <div class="btn-row">
+      <a class="btn secondary" style="text-decoration:none" href="p1.html">Open P1: PID playground</a>
+      <a class="btn secondary" style="text-decoration:none" href="p2.html">Open P2: slow sensor</a>
+      <a class="btn secondary" style="text-decoration:none" href="p3.html">Open P3: digital PID</a>
+      <button type="button" class="btn ghost" id="ms-reset">Reset to the illustrative placeholder values</button>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:16px">
+    <h2>Before submission: what the group must provide</h2>
+    <ul class="check-list" id="ms-todo"></ul>
+  </section>
+</main>
+
+<footer><div class="footer-inner"><span>ENCS4380 Interfacing Techniques · Homework 2 · Birzeit University</span><span id="repo-link"></span></div></footer>
+
+<script defer src="vendor/plotly/plotly.min.js"></script>
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/contrib/auto-render.min.js"></script>
+<script defer src="js/dyn-math.js"></script>
+<script defer src="js/ui.js"></script>
+<script defer src="js/pid-sim.js"></script>
+<script defer src="js/control-ui.js"></script>
+<script defer src="js/mysystem.js"></script>
+</body>
+</html>

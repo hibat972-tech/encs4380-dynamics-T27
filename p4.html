@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>P4 · Tuning challenge · Dynamic Characteristics Toolkit</title>
+  <meta name="description" content="Tune Kp, Ki and Kd for a hidden random plant until it meets a specification for overshoot, settling time and steady-state error. Each requirement is judged separately.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<noscript><div class="noscript">This toolkit needs JavaScript to draw its plots.</div></noscript>
+<header id="site-header" data-active="p4"></header>
+
+<main>
+  <section class="page-head">
+    <p class="kicker">Homework 2 · P4 of 4 · Control</p>
+    <h1>Tuning challenge</h1>
+    <p class="lede">A hidden plant and a specification. You only get Kp, Ki and Kd. Tune the controller until every requirement says PASS. The plant is drawn at random from the same family as “Guess the sensor” in Homework 1 (first order, or second order that rings), and the specification is generated so that it can be met.</p>
+  </section>
+
+  <details class="theory" open>
+    <summary>How to tune it</summary>
+    <div class="theory-body">
+      <div>
+        <h3>A recipe that works</h3>
+        <ol style="margin:0;padding-left:1.2em">
+          <li>Run the <strong>open-loop step test</strong> (u = 1). Read the final value (that is K) and the time to 63% (that is τ), like in Homework 1.</li>
+          <li><strong>P first.</strong> Raise Kp until the response is fast enough. A steady-state error will remain.</li>
+          <li><strong>Add I</strong> until the error disappears. If the overshoot is too large, lower Ki.</li>
+          <li><strong>Add D</strong> only if the response rings.</li>
+        </ol>
+      </div>
+      <div>
+        <h3>How each requirement is judged</h3>
+        <p><strong>Overshoot:</strong> peak above the final value, in %. <strong>Settling time:</strong> the last time the output is outside ±2% of the final value. <strong>Steady-state error:</strong> \(|r-y_\infty|\) as a % of the setpoint; “zero” is accepted up to 1% because the simulation has finite length. A response that never settles fails the last two.</p>
+      </div>
+      <div>
+        <h3>Scoring</h3>
+        <p>Overshoot 30 points, settling time 40 points, steady-state error 30 points. Each part is all-or-nothing and judged on its own, so you can see exactly which one to fix.</p>
+      </div>
+    </div>
+  </details>
+
+  <div id="p4-predict" style="margin-top:16px"></div>
+
+  <h2 style="margin-top:22px" id="p4-title">Your controller against the specification</h2>
+  <section class="workspace" aria-labelledby="p4-title">
+    <aside class="card controls" aria-label="Tuning controls">
+      <h2>Gains</h2>
+      <div id="p4-gains"></div>
+      <h2 style="margin-top:14px">Tools</h2>
+      <div id="p4-tools"></div>
+      <div class="btn-row" style="margin-top:12px">
+        <button type="button" class="btn" id="p4-new">New challenge</button>
+        <button type="button" class="btn secondary" id="p4-reset">Reset gains</button>
+      </div>
+      <div class="btn-row" style="margin-top:8px">
+        <button type="button" class="btn ghost" id="p4-reveal">Give up: reveal the plant</button>
+      </div>
+      <p class="ctl-hint">Setpoint step: 1 (the percentages do not depend on it). The control signal has no limit in this challenge.</p>
+    </aside>
+
+    <div class="results">
+      <div class="card">
+        <div style="display:flex;flex-wrap:wrap;gap:12px 28px;align-items:center;justify-content:space-between">
+          <div>
+            <h3 style="margin-bottom:2px">Specification for this plant</h3>
+            <p class="ctl-hint" style="margin:0" id="p4-id"></p>
+          </div>
+          <div style="text-align:right"><span class="r-label" style="color:var(--muted);font-size:.84rem;display:block">Score now</span><span class="score-big" id="p4-score">0</span><span style="color:var(--muted)"> / 100</span></div>
+        </div>
+        <div class="table-wrap" style="margin-top:8px">
+          <table class="spec-table">
+            <thead><tr><th>Requirement</th><th>Limit</th><th>Your controller</th><th>Result</th></tr></thead>
+            <tbody id="p4-spec"></tbody>
+          </table>
+        </div>
+        <div id="p4-verdict" style="margin-top:10px"></div>
+      </div>
+      <div class="status-box" id="p4-status"></div>
+      <div class="card plot-card">
+        <h3>Closed-loop response</h3>
+        <p class="caption">Dashed grey: setpoint. Blue: output. Orange dotted: the overshoot limit. Green dotted: the settling-time limit; the output has to stay inside the shaded ±2% band after that time.</p>
+        <div class="plot tall" id="p4-resp" role="img" aria-label="Closed-loop response against the specification"></div>
+      </div>
+      <div class="card plot-card" id="p4-ol-card" hidden>
+        <h3>Open-loop step test (u = 1, no controller)</h3>
+        <p class="caption">Apply a constant control signal of 1 to the plant. The final value is K. The time to reach 63.2% of it is τ (first-order plants). A plant that rings looks different.</p>
+        <div class="plot small" id="p4-ol" role="img" aria-label="Open-loop step response of the hidden plant"></div>
+      </div>
+      <div class="card plot-card">
+        <h3>Control signal u(t)</h3>
+        <div class="plot small" id="p4-ctrl" role="img" aria-label="Control signal"></div>
+      </div>
+      <div class="card" id="p4-reveal-card" hidden>
+        <h3>The hidden plant</h3>
+        <div id="p4-reveal-body"></div>
+      </div>
+      <div class="card">
+        <h3>Session</h3>
+        <div class="score-strip" id="p4-session"></div>
+        <p class="ctl-hint" style="margin-top:8px">A round ends when you press “New challenge” or reveal the plant. Its best score is added to the session. The session lives in this browser tab only.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer><div class="footer-inner"><span>ENCS4380 Interfacing Techniques · Homework 2 · Birzeit University</span><span id="repo-link"></span></div></footer>
+
+<script defer src="vendor/plotly/plotly.min.js"></script>
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/contrib/auto-render.min.js"></script>
+<script defer src="js/dyn-math.js"></script>
+<script defer src="js/ui.js"></script>
+<script defer src="js/pid-sim.js"></script>
+<script defer src="js/control-ui.js"></script>
+<script defer src="js/p4.js"></script>
+</body>
+</html>
