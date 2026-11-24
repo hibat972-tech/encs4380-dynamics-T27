@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ENCS4380 Homework 2: demo handout</title>
+<style>
+  @page { size: A4; margin: 10mm; }
+  * { box-sizing: border-box; }
+  body { font: 10pt/1.35system-ui, "Segoe UI", Arial, sans-serif; color: #15273a; margin: 0 auto; max-width: 190mm; }
+  h1 { font-size: 13pt; margin: 0 0 1mm; color: #12355b; }
+  h2 { font-size: 9.5pt; margin: 2.5mm 0 1mm; color: #12355b; border-bottom: 1px solid #b9c5d1; }
+  p { margin: 0 0 1mm; }
+  .sub { color: #627080; margin-bottom: 1mm; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; vertical-align: top; padding: 0.7mm 1.5mm; border-bottom: 1px solid #e3e8ee; }
+  th { color: #627080; font-weight: 600; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 5mm; }
+  ol, ul { margin: 0; padding-left: 4mm; }
+  li { margin-bottom: 0.8mm; }
+  code { font-family: Consolas, monospace; font-size: 8pt; background: #eef2f6; padding: 0 1mm; }
+  .note { background: #fff6ec; border: 1px solid #f2c9a6; padding: 1mm 2mm; margin-top: 2mm; }
+</style>
+</head>
+<body>
+<h1>ENCS4380 Homework 2: PID Control Toolkit, demo handout</h1>
+<p class="sub">Open <code>control.html</code> (also on a phone). Each member explains <b>their own</b> module's code and equations. Owners: ____________________________</p>
+
+<h2>10-minute demo route</h2>
+<table>
+<tr><th style="width:11mm">Time</th><th style="width:20mm">Page</th><th>Show and say</th><th style="width:14mm">Who</th></tr>
+<tr><td>0:00</td><td>Hub</td><td>Same Homework 1 plants, now in a feedback loop. Kp = 9: faster, but stops at 0.9.</td><td></td></tr>
+<tr><td>0:30</td><td>P1</td><td>Preset "Check 1" (10% error) → add Ki (error 0, overshoot) → "Second order: add D". Point at the P/I/D plot.</td><td></td></tr>
+<tr><td>3:00</td><td>P2</td><td>Fast / Slow / Very slow sensor presets; orange (measured) lags blue (true); sweep plot.</td><td></td></tr>
+<tr><td>5:00</td><td>P3</td><td>Ts = 0.01 s, then 0.9 s (breaks). Windup OFF / ON. Press Copy code.</td><td></td></tr>
+<tr><td>7:30</td><td>P4</td><td>New challenge, open-loop step test, tune to PASS.</td><td></td></tr>
+<tr><td>8:30</td><td>My System</td><td>Source banner (measured or placeholder?), design checks (ζ, PWM 0–100%), code.</td><td></td></tr>
+<tr><td>9:30</td><td>Validation</td><td>Three passes; point at the deviation column.</td><td></td></tr>
+</table>
+
+<h2>Likely questions, short answers</h2>
+<div class="cols">
+<ol>
+<li><b>P leaves an error?</b> Holding the output needs u = Kp·e ≠ 0, so e ≠ 0: e<sub>ss</sub> = 1/(1+K·Kp).</li>
+<li><b>I removes it?</b> The integral keeps changing u until e = 0. It has memory, so it can overshoot.</li>
+<li><b>What does D do?</b> Damps a plant that rings (2nd order). On a 1st-order plant the loop is (τ+K·Kd)s²+…: extra inertia, can raise overshoot.</li>
+<li><b>Why D on the measurement (P1/P2)?</b> Same as de/dt for a constant setpoint, no spike at a setpoint step. P3 uses the assignment equation (on e), so the first sample has a kick.</li>
+<li><b>Slow sensor rings?</b> Controller acts on old data (phase lag). PI + 1st-order plant is stable only if (τ+τs)(1+K·Kp) > τ·τs·K·Ki.</li>
+<li><b>Why RK4?</b> Accurate for a larger step; h = 0.25/λ. Tests match closed forms to ~10⁻¹².</li>
+</ol>
+<ol start="7">
+<li><b>Step vs Ts?</b> Controller runs every Ts and holds u (ZOH); the plant is integrated with smaller sub-steps h = Ts/n.</li>
+<li><b>Large Ts breaks it?</b> Hold adds ≈ Ts/2 delay. For K = 1, τ = 1, Kp = 9 stable only if Ts &lt; τ·ln((1+K·Kp)/(K·Kp−1)) = 0.223 s.</li>
+<li><b>Windup / anti-windup?</b> Integral grows while u is saturated. Ours stops adding to the sum while saturated and the error pushes further into the limit.</li>
+<li><b>K and τ of the motor?</b> PWM step from rest, log encoder speed: K = Δspeed/ΔPWM, τ = time to 63.2%.</li>
+<li><b>PI design?</b> ωn = 4/(ζ·ts), Kp = (2ζτωn−1)/K, Ki = τωn²/K. PI's zero adds overshoot, so the simulation judges.</li>
+<li><b>Saturation off in check 1?</b> Kp = 9 gives u(0+) = 9; a 0–1 limit would clip it and break the linear formulas.</li>
+<li><b>Z-N on the motor?</b> A 1st-order loop is stable for every Kp: no Ku. Needs 3 lags. Simulation only.</li>
+</ol>
+</div>
+
+<h2>Key equations</h2>
+<table>
+<tr><td style="width:62mm">Digital PID: u[k] = Kp e[k] + Ki Ts Σe + Kd (e[k]−e[k−1])/Ts</td><td style="width:50mm">PI: ωn = √(K·Ki/τ), ζ = (1+K·Kp)/(2√(τ·K·Ki))</td><td>P only: τcl = τ/(1+K·Kp), e<sub>ss</sub> = 1/(1+K·Kp)</td></tr>
+<tr><td>Sensor: τs·ẏm + ym = y, e = r − ym</td><td>Metrics: rise 10→90%, overshoot vs y∞, settling ±2%</td><td>Z-N PID: Kp = 0.6Ku, Ti = Pu/2, Td = Pu/8</td></tr>
+</table>
+
+<div class="note"><b>Be ready to say:</b> the motor K and τ are <b>[measured on date ___ / still placeholders]</b>. The Arduino code was <b>[compiled on ___ / not yet compiled]</b>. Z-N results are simulation only. Code map: <code>docs/HW2_DEMO_AND_AUDIT.md</code>, section 4.</div>
+</body>
+</html>
